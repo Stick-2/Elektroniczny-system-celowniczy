@@ -7,9 +7,11 @@ import drag
 import utils
 from holdover import holdover
 from points import points
+from math import log, degrees, atan, e
+from utils import metersToYards
 
 
-def solve(drag_function, drag_coefficient, vi, sight_height, shooting_angle, zero_angle, wind_speed, wind_angle, computationYards):
+def solve(drag_function, drag_coefficient, vi, sight_height, shooting_angle, zero_angle, wind_speed, wind_angle, computationMeters):
 
     t = 0
     dt = 0
@@ -23,6 +25,9 @@ def solve(drag_function, drag_coefficient, vi, sight_height, shooting_angle, zer
     dvy = 0
     x = 0
     y = 0
+
+
+    computationYards = metersToYards(computationMeters)
 
     hwind = windage.headwind(wind_speed, wind_angle)
     cwind = windage.crosswind(wind_speed, wind_angle)
@@ -42,6 +47,7 @@ def solve(drag_function, drag_coefficient, vi, sight_height, shooting_angle, zer
     n = computationYards
 
     hold_overs = points()
+
 
     while True:
         vx1 = vx
@@ -65,7 +71,18 @@ def solve(drag_function, drag_coefficient, vi, sight_height, shooting_angle, zer
                 # print("range_yards {}".format(range_yards))
                 # # if range_yards == 400:
                 moa_correction = -angles.rad_to_moa(math.atan(y / x))
-                return moa_correction
+                # liczenie odchylenia w poziomie //todo skalibrowac dla pocisku
+                if(cwind>0):
+                    B = 0.045289 * cwind + 0.000011
+                    correction_horizontal = t * cwind - 5000 / 313 * B * log(5000 * B + 313 * t * cwind, e) + 5000 / 313 * B * log(5000 * B, e)
+                    moa_correction_horizontal = 60 * degrees(atan(correction_horizontal / computationMeters))
+                else:
+                    cwind*=-1
+                    B = 0.045289 * cwind + 0.000011
+                    correction_horizontal = t * cwind - 5000 / 313 * B * log(5000 * B + 313 * t * cwind, e) + 5000 / 313 * B * log(5000 * B, e)
+                    moa_correction_horizontal = 60 * degrees(atan(correction_horizontal / computationMeters))
+                    moa_correction_horizontal *= -1
+                return moa_correction, moa_correction_horizontal
                 # path_inches = y*12
                 # print("path_inches {}". format(path_inches))
                 # impact_in = utils.moaToInch(moa_correction, x)

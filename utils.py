@@ -80,3 +80,6 @@ def cmToInches(cm):
 
 def metersToYards(m):
     return m * 1.0936133
+
+def metersPerSecoonds_to_milesPerHour(mps):
+    return 2.236936*mps

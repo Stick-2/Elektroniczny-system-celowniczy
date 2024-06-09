@@ -1,24 +1,26 @@
 import atmosphere
 import angles
 import ballistics
-from utils import metersToFeet, cmToInches, metersToYards
+from utils import metersToFeet, cmToInches, metersPerSecoonds_to_milesPerHour, metersToYards
 
 
-def calcBDC(bc, v, sh, zero, drag_function, computationMeters):
+
+def calcBDC(bc, v, sh, zero, drag_function, computationMeters, windspeed, windangle):
     # k = 0
+
+
 
     v = metersToFeet(v)
     sh = cmToInches(sh)
     zero = metersToYards(zero)
-    computationYards = metersToYards(computationMeters)
 
     # The shooting angle (uphill / downhill), in degrees.
     angle = 0
 
-    # The wind speed in miles per hour.
-    windspeed = 0
-    # The wind angle (0=headwind, 90=right to left, 180=tailwind, 270/-90=left to right)
-    windangle = 0
+    # # The wind speed in miles per hour.
+    # windspeed = 0
+    # # The wind angle (0=headwind, 90=right to left, 180=tailwind, 270/-90=left to right)
+    # windangle = 45
 
     altitude = 109.3
     barometer = 29.5  # cale słupka rtęci
@@ -47,7 +49,9 @@ def calcBDC(bc, v, sh, zero, drag_function, computationMeters):
     # Now we have everything needed to generate a full solution.
     # So we do.  The solution is stored in the pointer "sln" passed as the last argument.
     # k has the number of yards the solution is valid for, also the number of rows in the solution.
-    hold_overs = ballistics.solve(drag_function, bc, v, sh, angle,
-                                  zeroangle, windspeed, windangle, computationYards)
+    hold_overs, moa_correction_horizontal = ballistics.solve(drag_function, bc, v, sh, angle,
+                                  zeroangle, windspeed, windangle, computationMeters)
 
-    return hold_overs
+
+
+    return hold_overs, moa_correction_horizontal
