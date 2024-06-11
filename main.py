@@ -21,29 +21,113 @@ def index(req, resp):
     yield from picoweb.start_response(resp)
     html_content = """
     <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Ballistic Calculator</title>
-    </head>
-    <body>
-        <h1>Ballistic Calculator</h1>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comarch Targeting System - Ballistic Calculator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #1f1f1f; 
+            color: #ffffff; 
+            overflow: hidden;
+            cursor: url('cursor.png'), auto;
+        }
+        .container {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            max-width: 600px;
+            margin: 100px auto; 
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            background-color: rgba(0, 0, 0, 0.7); 
+        }
+        h1 {
+            text-align: center;
+            font-size: 2em;
+            margin-bottom: 20px;
+        }
+        h1 span {
+            display: block; 
+            font-size: 1.5em; 
+            font-weight: normal;
+            color: #1c75db; 
+        }
+        .separator {
+            width: 100%;
+            height: 2px;
+            background-color: #1c75db;
+            margin: 10px 0;
+        }
+        form {
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        label {
+            font-weight: bold;
+        }
+        input[type="number"],
+        input[type="text"],
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ffffff;
+            border-radius: 6px;
+            box-sizing: border-box;
+            background-color: #000000;
+            color: #ffffff;
+        }
+        input[type="submit"] {
+            width: 100%;
+            padding: 12px;
+            background-color: #1c75db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+        input[type="submit"]:hover {
+            background-color: #2c8cf4;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><span>Comarch</span> Targeting System <span class="separator"></span> Ballistic Calculator</h1>
         <form action="/rotate" method="post">
-            <label for="bc">Ballistic coeficient:</label>
-            <input type="number" step=0.001 id="bc" name="ballistic coeficient" required><br><br>
+            <label for="bc">Ballistic coefficient:</label>
+            <input type="number" step="0.001" id="bc" name="ballistic coeficient" required>
             <label for="v">Initial velocity [m/s]:</label>
-            <input type="number" step=0.001 id="v" name="initial velocity" required><br><br>
+            <input type="number" step="0.001" id="v" name="initial velocity" required>
             <label for="sh">The Sight height over bore [cm]:</label>
-            <input type="number" step=0.001 id="sh" name="sight hight over bore" required><br><br>
+            <input type="number" step="0.001" id="sh" name="sight height over bore" required>
             <label for="zero">The zero range of the rifle [m]:</label>
-            <input type="number" step=0.001 id="zero" name="rifle zero" required><br><br>
+            <input type="number" step="0.001" id="zero" name="rifle zero" required>
             <label for="drag_function">Drag function:</label>
-            <input type="text" id="drag_function" name="drag function" required><br><br>
-            <label for="computationMeters">Range fo computation [m]:</label>
-            <input type="number" step=0.001 id="computationMeters" name="distance" required><br><br>
+            <select id="drag_function" name="drag function" required>
+                <option value="G1">G1</option>
+                <option value="G2">G2</option>
+                <option value="G3">G3</option>
+                <option value="G4">G4</option>
+            </select>
+            <label for="computationMeters">Range for computation [m]:</label>
+            <input type="number" step="0.001" id="computationMeters" name="distance" required>
             <input type="submit" value="Compute distance">
         </form>
-    </body>
-    </html>
+    </div>
+</body>
+</html>
     """
     yield from resp.awrite(html_content)
 
@@ -59,12 +143,15 @@ def rotate(req, resp):
             drag_function = req.form.get("drag function", "")
             computationMeters = float(req.form.get("distance", 0))
             print(f"dane pobrane")
-            MOA = calcBDC(bc, v, sh, zero, drag_function, computationMeters)
+            with open("data.txt", "w") as file:
+                file.write("{},{},{},{},{}\n".format(bc, v, sh, zero, drag_function))
+            print(f"dane zapisane")
+            MOA_V, MOA_H = calcBDC(bc, v, sh, zero, drag_function, computationMeters, 0, 0)
             print(f"MOA obliczone")
-            angle = int(MOA)*5
+            angle = int(MOA_V)*5
             print(f"Kat policzony")
-            set_stepper_motor_angle(angle, MOA)
-            message = f"Rotation by {MOA:.2f} MOA. Returning to main page..."
+            set_stepper_motor_angle(angle, MOA_V)
+            message = f"Rotation by {MOA_V:.2f} MOA. Returning to main page..."
             yield from picoweb.start_response(resp)
             response_html = f"""
                 <html>
@@ -82,11 +169,11 @@ def rotate(req, resp):
     else:
         yield from picoweb.http_error(resp, "400", "Missing angle parameter.")
 
-def set_stepper_motor_angle(angle, MOA):
+def set_stepper_motor_angle(angle, MOA_V):
     print(f"obracanie")
     s1.angle(angle)  # Ustawianie wymaganego kąta
     print(f"Stepper motor set to {angle} degrees")  # Wydruk stanu dla debugowania
-    print(f"Correction: {MOA} MOA")
+    print(f"Correction: {MOA_V} MOA")
 
 def run():
     app.run(debug=True, host="0.0.0.0", port=80)
